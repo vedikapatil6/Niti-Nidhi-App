@@ -33,7 +33,7 @@ const SchemeDetailsScreen = ({ scheme, onBack, onApplyNow }) => {
       }
 
       const response = await fetch(
-        `https://675c206341f0.ngrok-free.app/api/schemes/${scheme.id}`,
+        `https://7e3777787c19.ngrok-free.app/api/schemes/${scheme.id}`,
         {
           method: 'GET',
           headers: {

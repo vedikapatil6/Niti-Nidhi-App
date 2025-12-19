@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { authenticatedFetch } from '../Tokenutils';
+import { API_ENDPOINTS } from './Config';
 // Import all your screen components
 import ComplaintFormScreen from '../ComplaintFormScreen';
 import SchemesScreen from '../SchemesScreen';
@@ -192,8 +193,8 @@ export const DashboardScreen = () => {
     try {
       console.log('Attempting login with:', mobile);
       
-      const response = await fetch(
-        'https://675c206341f0.ngrok-free.app/api/auth/token/',
+      const response = await authenticatedFetch(
+        'https://7e3777787c19.ngrok-free.app/api/auth/token/',
         {
           method: 'POST',
           headers: { 

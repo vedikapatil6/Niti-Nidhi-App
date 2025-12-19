@@ -12,10 +12,13 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Switch,
+  Animated,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Speech from 'expo-speech';
 import SchemeDetailsScreen from './SchemeDetailsScreen';
 
 const CATEGORIES = [
@@ -35,7 +38,7 @@ const cardWidth = (width - 56) / 3;
 
 // --- Sub Components DEFINED BEFORE MAIN COMPONENT ---
 
-const Header = ({ onBack, searchQuery, setSearchQuery }) => {
+const Header = ({ onBack, searchQuery, setSearchQuery, isSpeaking, stopVoiceGuidance }) => {
   return (
     <View style={styles.headerContainer}>
       <View style={styles.headerTop}>
@@ -45,14 +48,14 @@ const Header = ({ onBack, searchQuery, setSearchQuery }) => {
 
         <Text style={styles.headerTitle}>Explore Schemes</Text>
 
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={20} color="#FFF" />
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>1</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          onPress={isSpeaking ? stopVoiceGuidance : null}
+          style={styles.headerIcons}
+        >
+          {isSpeaking && (
+            <MaterialCommunityIcons name="volume-high" size={24} color="#FFF" />
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchBar}>
@@ -69,28 +72,45 @@ const Header = ({ onBack, searchQuery, setSearchQuery }) => {
   );
 };
 
-const CategoryCard = ({ data, onPress, schemeCount, isLoading }) => {
+const CategoryCard = ({ data, onPress, schemeCount, isLoading, isHighlighted, pulseAnim }) => {
   return (
-    <TouchableOpacity 
-      style={styles.card}
-      activeOpacity={0.7}
-      onPress={() => onPress(data.name)}
-      disabled={isLoading}
+    <Animated.View
+      style={[
+        styles.animatedCardWrapper,
+        {
+          transform: [{ scale: pulseAnim }],
+        },
+      ]}
     >
-      <View style={styles.iconWrapper}>
-        <Ionicons 
-          name={data.icon}
-          size={36} 
-          color="#374151"
-        />
-      </View>
-      <Text style={styles.cardText}>{data.name}</Text>
-      {schemeCount !== null && schemeCount > 0 && (
-        <View style={styles.countBadge}>
-          <Text style={styles.countText}>{schemeCount}</Text>
+      <TouchableOpacity 
+        style={[
+          styles.card,
+          isHighlighted && styles.cardHighlighted
+        ]}
+        activeOpacity={0.7}
+        onPress={() => onPress(data.name)}
+        disabled={isLoading}
+      >
+        <View style={styles.iconWrapper}>
+          <Ionicons 
+            name={data.icon}
+            size={36} 
+            color="#374151"
+          />
         </View>
-      )}
-    </TouchableOpacity>
+        <Text style={styles.cardText}>{data.name}</Text>
+        {schemeCount !== null && schemeCount > 0 && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{schemeCount}</Text>
+          </View>
+        )}
+        {isHighlighted && (
+          <View style={styles.highlightIndicator}>
+            <MaterialCommunityIcons name="volume-high" size={16} color="#1E3A8A" />
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
@@ -155,12 +175,7 @@ const CategorySchemesScreen = ({ category, schemes, onBack, onSchemeSelect, load
           <Text style={styles.headerTitle}>{category} Schemes</Text>
 
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="notifications-outline" size={20} color="#FFF" />
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>1</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={{ width: 40 }} />
           </View>
         </View>
 
@@ -281,10 +296,201 @@ const ExploreSchemes = ({ onBack }) => {
   const [loading, setLoading] = useState(false);
   const [categoryCounts, setCategoryCounts] = useState({});
 
+  // Voice guidance states
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [language, setLanguage] = useState('english'); // 'english' or 'hindi'
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentHighlight, setCurrentHighlight] = useState(null); // category id being highlighted
+
+  // Animation values for each category
+  const [categoryAnims] = useState(
+    CATEGORIES.reduce((acc, cat) => {
+      acc[cat.id] = new Animated.Value(1);
+      return acc;
+    }, {})
+  );
+
   // Fetch scheme count for each category on mount
   useEffect(() => {
     fetchAllCategoryCounts();
+    
+    // Play welcome guidance after component mounts
+    const timer = setTimeout(() => {
+      if (voiceEnabled) {
+        playVoiceGuidance();
+      }
+    }, 800);
+
+    // Cleanup function
+    return () => {
+      clearTimeout(timer);
+      Speech.stop();
+    };
   }, []);
+
+  // Animate highlighted category
+  useEffect(() => {
+    if (currentHighlight) {
+      startPulseAnimation(categoryAnims[currentHighlight]);
+    }
+  }, [currentHighlight]);
+
+  const startPulseAnimation = (animValue) => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(animValue, {
+          toValue: 1.08,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animValue, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
+  const stopPulseAnimation = (animValue) => {
+    animValue.stopAnimation();
+    Animated.timing(animValue, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const playVoiceGuidance = async () => {
+    if (!voiceEnabled) return;
+
+    const messages = {
+      english: {
+        welcome: "Welcome to Explore Schemes. Here you can browse government schemes by category.",
+        intro: "We have organized schemes into nine categories for easy access.",
+        agriculture: "Agriculture category contains schemes for farmers and agricultural development.",
+        health: "Health category includes medical and healthcare related schemes.",
+        business: "Business category features schemes for entrepreneurs and business development.",
+        education: "Education category offers schemes for students and educational institutions.",
+        women: "Women category has schemes specifically designed for women empowerment.",
+        housing: "Housing category contains schemes for home construction and urban development.",
+        science: "Science category includes schemes for research and scientific development.",
+        sports: "Sports category features schemes for athletes and sports development.",
+        safety: "Public Safety category includes schemes for security and safety initiatives.",
+        outro: "Tap on any category to explore the schemes available.",
+      },
+      hindi: {
+        welcome: "योजनाओं का अन्वेषण करें में आपका स्वागत है। यहां आप श्रेणी के अनुसार सरकारी योजनाओं को ब्राउज़ कर सकते हैं।",
+        intro: "हमने आसान पहुंच के लिए योजनाओं को नौ श्रेणियों में व्यवस्थित किया है।",
+        agriculture: "कृषि श्रेणी में किसानों और कृषि विकास के लिए योजनाएं हैं।",
+        health: "स्वास्थ्य श्रेणी में चिकित्सा और स्वास्थ्य संबंधी योजनाएं शामिल हैं।",
+        business: "व्यवसाय श्रेणी में उद्यमियों और व्यवसाय विकास के लिए योजनाएं हैं।",
+        education: "शिक्षा श्रेणी छात्रों और शैक्षिक संस्थानों के लिए योजनाएं प्रदान करती है।",
+        women: "महिला श्रेणी में महिला सशक्तिकरण के लिए विशेष रूप से डिज़ाइन की गई योजनाएं हैं।",
+        housing: "आवास श्रेणी में घर निर्माण और शहरी विकास के लिए योजनाएं हैं।",
+        science: "विज्ञान श्रेणी में अनुसंधान और वैज्ञानिक विकास के लिए योजनाएं शामिल हैं।",
+        sports: "खेल श्रेणी में एथलीटों और खेल विकास के लिए योजनाएं हैं।",
+        safety: "सार्वजनिक सुरक्षा श्रेणी में सुरक्षा और सुरक्षा पहल के लिए योजनाएं शामिल हैं।",
+        outro: "उपलब्ध योजनाओं का पता लगाने के लिए किसी भी श्रेणी पर टैप करें।",
+      },
+    };
+
+    try {
+      setIsSpeaking(true);
+      const languageCode = language === 'hindi' ? 'hi-IN' : 'en-US';
+
+      // Welcome message
+      await speakMessage(messages[language].welcome, languageCode);
+      await delay(500);
+
+      // Intro
+      await speakMessage(messages[language].intro, languageCode);
+      await delay(800);
+
+      // Go through each category
+      const categoryMessageKeys = [
+        'agriculture', 'health', 'business', 'education', 
+        'women', 'housing', 'science', 'sports', 'safety'
+      ];
+
+      for (let i = 0; i < CATEGORIES.length; i++) {
+        const category = CATEGORIES[i];
+        const messageKey = categoryMessageKeys[i];
+        
+        // Highlight current category
+        setCurrentHighlight(category.id);
+        
+        // Speak about the category
+        await speakMessage(messages[language][messageKey], languageCode);
+        
+        // Remove highlight
+        setCurrentHighlight(null);
+        stopPulseAnimation(categoryAnims[category.id]);
+        
+        // Small pause between categories
+        await delay(400);
+      }
+
+      // Outro message
+      await speakMessage(messages[language].outro, languageCode);
+
+      setIsSpeaking(false);
+    } catch (error) {
+      console.error('Error playing voice guidance:', error);
+      setIsSpeaking(false);
+      setCurrentHighlight(null);
+      // Stop all animations
+      Object.values(categoryAnims).forEach(anim => stopPulseAnimation(anim));
+    }
+  };
+
+  const speakMessage = (message, languageCode) => {
+    return new Promise((resolve, reject) => {
+      Speech.speak(message, {
+        language: languageCode,
+        pitch: 1.0,
+        rate: 0.85,
+        onDone: resolve,
+        onStopped: resolve,
+        onError: reject,
+      });
+    });
+  };
+
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const stopVoiceGuidance = async () => {
+    try {
+      await Speech.stop();
+      setIsSpeaking(false);
+      setCurrentHighlight(null);
+      // Stop all animations
+      Object.values(categoryAnims).forEach(anim => stopPulseAnimation(anim));
+    } catch (error) {
+      console.error('Error stopping voice guidance:', error);
+    }
+  };
+
+  const handleLanguageChange = (newLanguage) => {
+    setLanguage(newLanguage);
+    stopVoiceGuidance();
+  };
+
+  const handleVoiceToggle = (value) => {
+    setVoiceEnabled(value);
+    if (!value) {
+      stopVoiceGuidance();
+    }
+  };
+
+  const handleReplayGuidance = () => {
+    stopVoiceGuidance();
+    setTimeout(() => {
+      if (voiceEnabled) {
+        playVoiceGuidance();
+      }
+    }, 300);
+  };
 
   const fetchAllCategoryCounts = async () => {
     try {
@@ -448,12 +654,115 @@ const ExploreSchemes = ({ onBack }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
       
-      <Header onBack={onBack} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Header 
+        onBack={onBack} 
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery}
+        isSpeaking={isSpeaking}
+        stopVoiceGuidance={stopVoiceGuidance}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Voice Guidance Controls */}
+        <View style={styles.voiceControlsContainer}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="account-voice" size={20} color="#1E3A8A" />
+            <Text style={styles.voiceSectionTitle}>Voice Guidance</Text>
+          </View>
+          
+          <View style={styles.voiceControls}>
+            {/* Voice On/Off */}
+            <View style={styles.controlRow}>
+              <View style={styles.controlLabel}>
+                <MaterialCommunityIcons 
+                  name={voiceEnabled ? "volume-high" : "volume-off"} 
+                  size={20} 
+                  color="#1E3A8A" 
+                />
+                <Text style={styles.controlText}>Enable Voice</Text>
+              </View>
+              <Switch
+                value={voiceEnabled}
+                onValueChange={handleVoiceToggle}
+                trackColor={{ false: '#CBD5E1', true: '#93C5FD' }}
+                thumbColor={voiceEnabled ? '#1E3A8A' : '#64748B'}
+              />
+            </View>
+
+            {/* Language Selection */}
+            <View style={styles.controlRow}>
+              <View style={styles.controlLabel}>
+                <MaterialCommunityIcons name="translate" size={20} color="#1E3A8A" />
+                <Text style={styles.controlText}>Language</Text>
+              </View>
+              <View style={styles.languageButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.languageButton,
+                    language === 'english' && styles.languageButtonActive
+                  ]}
+                  onPress={() => handleLanguageChange('english')}
+                >
+                  <Text style={[
+                    styles.languageButtonText,
+                    language === 'english' && styles.languageButtonTextActive
+                  ]}>
+                    English
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.languageButton,
+                    language === 'hindi' && styles.languageButtonActive
+                  ]}
+                  onPress={() => handleLanguageChange('hindi')}
+                >
+                  <Text style={[
+                    styles.languageButtonText,
+                    language === 'hindi' && styles.languageButtonTextActive
+                  ]}>
+                    हिंदी
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Replay and Stop Buttons */}
+          <View style={styles.voiceActionButtons}>
+            {isSpeaking ? (
+              <TouchableOpacity 
+                style={styles.stopSpeakingButton}
+                onPress={stopVoiceGuidance}
+              >
+                <MaterialCommunityIcons name="stop-circle" size={20} color="#EF4444" />
+                <Text style={styles.stopSpeakingText}>Stop Voice</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={styles.replayButton}
+                onPress={handleReplayGuidance}
+                disabled={!voiceEnabled}
+              >
+                <MaterialCommunityIcons 
+                  name="replay" 
+                  size={20} 
+                  color={voiceEnabled ? "#1E3A8A" : "#CBD5E1"} 
+                />
+                <Text style={[
+                  styles.replayButtonText,
+                  !voiceEnabled && styles.replayButtonTextDisabled
+                ]}>
+                  Replay Guidance
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         <Text style={styles.sectionTitle}>Categories</Text>
         
         {filteredCategories.length > 0 ? (
@@ -464,7 +773,9 @@ const ExploreSchemes = ({ onBack }) => {
                 data={cat} 
                 onPress={handleCategoryPress}
                 schemeCount={categoryCounts[cat.name]}
-                isLoading={loading}
+                isLoading={loading || isSpeaking}
+                isHighlighted={currentHighlight === cat.id}
+                pulseAnim={categoryAnims[cat.id]}
               />
             ))}
           </View>
@@ -499,6 +810,113 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginBottom: 16,
+    marginTop: 8,
+  },
+  voiceControlsContainer: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  voiceSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1E3A8A',
+  },
+  voiceControls: {
+    gap: 16,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  controlLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  controlText: {
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  languageButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  languageButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  languageButtonActive: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
+  },
+  languageButtonText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  languageButtonTextActive: {
+    color: '#FFF',
+  },
+  voiceActionButtons: {
+    marginTop: 12,
+  },
+  stopSpeakingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  stopSpeakingText: {
+    fontSize: 14,
+    color: '#EF4444',
+    fontWeight: '600',
+  },
+  replayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#DBEAFE',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+  },
+  replayButtonText: {
+    fontSize: 14,
+    color: '#1E3A8A',
+    fontWeight: '600',
+  },
+  replayButtonTextDisabled: {
+    color: '#CBD5E1',
   },
   gridContainer: {
     flexDirection: 'row',
@@ -506,8 +924,11 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'space-between',
   },
-  card: {
+  animatedCardWrapper: {
     width: cardWidth,
+  },
+  card: {
+    width: '100%',
     height: cardWidth * 1.1,
     backgroundColor: 'white',
     borderRadius: 12,
@@ -519,9 +940,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#e5e7eb',
     position: 'relative',
+  },
+  cardHighlighted: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FCD34D',
+    borderWidth: 3,
+    elevation: 8,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
   iconWrapper: {
     marginBottom: 8,
@@ -552,6 +983,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
+  highlightIndicator: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#FFF',
+    padding: 4,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
   headerContainer: {
     backgroundColor: '#1E3A8A',
     padding: 20,
@@ -580,9 +1024,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerIcons: {
-    flexDirection: 'row',
     width: 40,
-    justifyContent: 'flex-end',
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   iconButton: {
     width: 40,
