@@ -31,10 +31,14 @@ Your browser does not support the video tag.
 > 📌 *Project walkthrough and live demo*
 
 <p align="center">
-  <video src="demo_video.mp4" controls width="90%">
-    Your browser does not support the video tag.
-  </video>
+  <a href="https://drive.google.com/file/d/17Vqu-TPHRky-5lZ0-gEz2bclEEvoMgyV/view?usp=sharing" target="_blank">
+  </a>
 </p>
+
+<p align="center">
+  ▶️ Click to watch the demo video
+</p>
+
 
 ---
 
