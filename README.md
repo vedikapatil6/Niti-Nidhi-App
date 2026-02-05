@@ -84,7 +84,41 @@ By combining proactive AI assistance, unified service tracking, offline-first wo
 
 - **Smart Assisted Form Auto-Filling**  
   Automatically fills government application forms using verified data combined with voice-guided assistance, minimizing errors and saving time.
+---
 
+## 🧑‍💻 Technologies Used
+
+### Frontend
+- React Native  
+- Expo  
+- Vite  
+- JavaScript  
+
+### Backend & APIs
+- Django  
+- FastAPI  
+- WebSocket  
+- Ngrok  
+
+### Database & Storage
+- MongoDB  
+- Amazon S3  
+
+### AI & Voice
+- Google Gemini  
+- ElevenLabs  
+
+### IVR & Messaging
+- Exotel  
+- Twilio  
+
+### Blockchain
+- Ethereum  
+- IPFS  
+- MetaMask  
+
+### Authentication
+- JWT (JSON Web Tokens)
 ---
 
 ## 🧩 System Architecture
