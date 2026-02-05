@@ -16,14 +16,6 @@ Existing systems are largely text-heavy, internet-dependent, and fragmented acro
 
 ---
 
-## 🎥 Demo Video
-
-> 📌 *Project walkthrough and live demo*
-
-<!-- Option 1: GitHub-hosted video -->
-<video src="VIDEO_LINK_HERE" controls width="100%">
-Your browser does not support the video tag.
-</video>
 
 <!-- Option 2: External link -->
 ## 🎥 Demo Video
