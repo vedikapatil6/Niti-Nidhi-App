@@ -30,14 +30,8 @@ Your browser does not support the video tag.
 
 > 📌 *Project walkthrough and live demo*
 
-<p align="center">
-  <a href="https://drive.google.com/file/d/17Vqu-TPHRky-5lZ0-gEz2bclEEvoMgyV/view?usp=sharing" target="_blank">
-  </a>
-</p>
-
-<p align="center">
-  ▶️ Click to watch the demo video
-</p>
+🎬 **Watch Demo Video:**  
+👉 https://drive.google.com/file/d/17Vqu-TPHRky-5lZ0-gEz2bclEEvoMgyV/view?usp=sharing
 
 
 ---
