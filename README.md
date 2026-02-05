@@ -26,7 +26,15 @@ Your browser does not support the video tag.
 </video>
 
 <!-- Option 2: External link -->
-🔗 **Demo Video Link:** [Click here to watch](VIDEO_LINK_HERE)
+## 🎥 Demo Video
+
+> 📌 *Project walkthrough and live demo*
+
+<p align="center">
+  <video src="demo_video.mp4" controls width="90%">
+    Your browser does not support the video tag.
+  </video>
+</p>
 
 ---
 
@@ -91,7 +99,6 @@ By combining proactive AI assistance, unified service tracking, offline-first wo
 
 ## 🧩 System Architecture
 
-> 📌 *High-level architecture illustrating Smart IVR, Mobile App, AI services, backend APIs, and data flow.*
 
 <p align="center">
   <img src="system_architecture.jpeg" alt="System Architecture Diagram" width="90%">
