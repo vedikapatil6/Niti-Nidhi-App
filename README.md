@@ -87,6 +87,8 @@ By combining proactive AI assistance, unified service tracking, offline-first wo
 ---
 
 ## 🧑‍💻 Technologies Used
+
+---
 Frontend: React Native, Expo, Vite, JavaScript  
 Backend & APIs: Django, FastAPI, WebSocket, Ngrok  
 Database & Storage: MongoDB, Amazon S3  
@@ -94,7 +96,6 @@ AI & Voice: Google Gemini, ElevenLabs
 IVR & Messaging: Exotel, Twilio  
 Blockchain: Ethereum, IPFS, MetaMask  
 Authentication: JWT (JSON Web Tokens)
----
 
 ## 🧩 System Architecture
 
