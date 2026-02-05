@@ -91,10 +91,11 @@ By combining proactive AI assistance, unified service tracking, offline-first wo
 
 ## 🧩 System Architecture
 
-> 📌 *High-level system architecture illustrating IVR, mobile app, AI layer, backend services, and data flow*
+> 📌 *High-level architecture illustrating Smart IVR, Mobile App, AI services, backend APIs, and data flow.*
 
-<!-- Architecture diagram container -->
-![System Architecture Diagram](ARCHITECTURE_DIAGRAM_LINK_HERE)
+<p align="center">
+  <img src="system_architecture.jpeg" alt="System Architecture Diagram" width="90%">
+</p>
 
 ---
 
